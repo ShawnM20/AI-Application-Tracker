@@ -3,22 +3,24 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { 
-  Brain, 
-  Send, 
-  Briefcase, 
+import {
+  Brain,
+  Briefcase,
+  Building,
   Target,
   Lightbulb,
   Clock,
   TrendingUp,
   Users,
-  Code,
   MessageSquare,
   Loader2,
   Settings,
-  Key,
-  CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Mic,
+  MicOff,
+  Award,
+  Sparkles,
+  Key
 } from 'lucide-react';
 import aiService from '../services/aiService';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,6 +34,10 @@ const InterviewPrep = () => {
   const [loading, setLoading] = useState(false);
   const [interviewData, setInterviewData] = useState(null);
   const [activeTab, setActiveTab] = useState('questions');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState([]);
 
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState({
@@ -45,7 +51,11 @@ const InterviewPrep = () => {
     darkMode: false,
     notifications: true,
     defaultExperience: '',
-    autoSave: true
+    autoSave: true,
+    voiceEnabled: false,
+    videoEnabled: false,
+    difficulty: 'medium',
+    questionType: 'behavioral'
   });
 
   useEffect(() => {
@@ -119,83 +129,183 @@ const InterviewPrep = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-white mb-4">AI Interview Preparation</h2>
-        <p className="text-white/70 text-lg">Get personalized interview questions and preparation tips powered by AI</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center"
+      >
+        <div className="mb-6">
+          <h2 className="text-4xl font-bold text-white mb-4 bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">
+            AI Interview Preparation
+          </h2>
+          <p className="text-white/70 text-lg">Get personalized interview questions and preparation tips powered by AI</p>
+        </div>
+        
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: 'Sessions', value: sessionHistory.length, icon: Users, color: 'from-blue-500 to-cyan-500' },
+            { label: 'Questions', value: interviewData?.questions?.length || 0, icon: MessageSquare, color: 'from-purple-500 to-pink-500' },
+            { label: 'Est. Prep Time', value: '45 min', icon: Clock, color: 'from-green-500 to-emerald-500' },
+            { label: 'Topics Covered', value: interviewData ? 4 : 0, icon: Award, color: 'from-orange-500 to-red-500' },
+          ].map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className="glass-effect rounded-xl p-4 border border-white/10"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/60 text-xs">{stat.label}</p>
+                  <p className="text-xl font-bold text-white">{stat.value}</p>
+                </div>
+                <div className={`w-8 h-8 bg-gradient-to-r ${stat.color} rounded-lg flex items-center justify-center`}>
+                  <stat.icon className="w-4 h-4 text-white" />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
 
       {/* Input Form */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-effect rounded-2xl p-8"
+        className="glass-effect rounded-2xl p-8 border border-white/10"
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           <div>
             <label className="block text-white/70 text-sm font-medium mb-2">Job Title *</label>
-            <input
-              type="text"
-              value={jobTitle}
-              onChange={(e) => setJobTitle(e.target.value)}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-white/40"
-              placeholder="e.g., Software Engineer"
-            />
+            <div className="relative">
+              <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+              <input
+                type="text"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all"
+                placeholder="e.g., Software Engineer"
+              />
+            </div>
           </div>
           <div>
             <label className="block text-white/70 text-sm font-medium mb-2">Company (Optional)</label>
-            <input
-              type="text"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-white/40"
-              placeholder="e.g., Google, Microsoft"
-            />
+            <div className="relative">
+              <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+              <input
+                type="text"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all"
+                placeholder="e.g., Google, Microsoft"
+              />
+            </div>
           </div>
           <div>
             <label className="block text-white/70 text-sm font-medium mb-2">Experience Level</label>
             <select
               value={experience}
               onChange={(e) => setExperience(e.target.value)}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-white/40"
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all appearance-none cursor-pointer"
             >
-              <option value="">Select experience</option>
-              <option value="entry">Entry Level (0-2 years)</option>
-              <option value="mid">Mid Level (2-5 years)</option>
-              <option value="senior">Senior Level (5+ years)</option>
-              <option value="lead">Lead/Manager</option>
+              <option value="" style={{ color: '#000', backgroundColor: '#fff' }}>Select experience</option>
+              <option value="entry" style={{ color: '#000', backgroundColor: '#fff' }}>Entry Level (0-2 years)</option>
+              <option value="mid" style={{ color: '#000', backgroundColor: '#fff' }}>Mid Level (2-5 years)</option>
+              <option value="senior" style={{ color: '#000', backgroundColor: '#fff' }}>Senior Level (5+ years)</option>
+              <option value="lead" style={{ color: '#000', backgroundColor: '#fff' }}>Lead/Manager</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-white/70 text-sm font-medium mb-2">Question Type</label>
+            <select
+              value={settings.questionType}
+              onChange={(e) => updateSettings('questionType', e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all appearance-none cursor-pointer"
+            >
+              <option value="behavioral" style={{ color: '#000', backgroundColor: '#fff' }}>Behavioral Questions</option>
+              <option value="technical" style={{ color: '#000', backgroundColor: '#fff' }}>Technical Questions</option>
+              <option value="situational" style={{ color: '#000', backgroundColor: '#fff' }}>Situational Questions</option>
+              <option value="mixed" style={{ color: '#000', backgroundColor: '#fff' }}>Mixed Questions</option>
             </select>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div>
+            <label className="block text-white/70 text-sm font-medium mb-2">Difficulty</label>
+            <select
+              value={settings.difficulty}
+              onChange={(e) => updateSettings('difficulty', e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all appearance-none cursor-pointer"
+            >
+              <option value="easy" style={{ color: '#000', backgroundColor: '#fff' }}>Easy</option>
+              <option value="medium" style={{ color: '#000', backgroundColor: '#fff' }}>Medium</option>
+              <option value="hard" style={{ color: '#000', backgroundColor: '#fff' }}>Hard</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-white/70 text-sm font-medium mb-2">AI Provider</label>
+            <select
+              value={settings.aiProvider}
+              onChange={(e) => updateSettings('aiProvider', e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all appearance-none cursor-pointer"
+            >
+              <option value="groq" style={{ color: '#000', backgroundColor: '#fff' }}>Groq (Fast)</option>
+              <option value="openai" style={{ color: '#000', backgroundColor: '#fff' }}>OpenAI (GPT-4)</option>
+              <option value="anthropic" style={{ color: '#000', backgroundColor: '#fff' }}>Anthropic (Claude)</option>
+              <option value="together" style={{ color: '#000', backgroundColor: '#fff' }}>Together AI</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-white/70 text-sm font-medium mb-2">Voice Recording</label>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => updateSettings('voiceEnabled', !settings.voiceEnabled)}
+              className={`w-full px-4 py-3 rounded-xl flex items-center justify-center space-x-2 transition-all ${
+                settings.voiceEnabled 
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                  : 'bg-white/10 text-white/70 border border-white/20'
+              }`}
+            >
+              {settings.voiceEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+              <span>{settings.voiceEnabled ? 'Voice Enabled' : 'Voice Disabled'}</span>
+            </motion.button>
+          </div>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-4">
           <motion.button
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
             onClick={generateInterviewPrep}
             disabled={loading}
-            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white px-8 py-3 rounded-xl font-medium flex items-center justify-center space-x-2 disabled:opacity-50"
+            className="flex-1 bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-8 py-4 rounded-xl font-medium flex items-center justify-center space-x-2 disabled:opacity-50 shadow-lg hover:shadow-xl transition-all duration-200"
           >
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Generating Preparation...</span>
+                <span>Generating AI Preparation...</span>
               </>
             ) : (
               <>
                 <Brain className="w-5 h-5" />
                 <span>Generate Interview Prep</span>
+                <Sparkles className="w-4 h-4 ml-2" />
               </>
             )}
           </motion.button>
           
           <motion.button
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowSettings(!showSettings)}
-            className="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2"
+            className="bg-white/10 hover:bg-white/20 text-white px-6 py-4 rounded-xl font-medium flex items-center space-x-2 border border-white/20 hover:shadow-lg transition-all duration-200"
           >
             <Settings className="w-5 h-5" />
-            <span>AI Settings</span>
+            <span className="hidden sm:inline">Advanced Settings</span>
           </motion.button>
         </div>
       </motion.div>
@@ -349,136 +459,86 @@ const InterviewPrep = () => {
       {/* AI Settings Panel */}
       {showSettings && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          className="glass-effect rounded-2xl p-6 border border-white/20"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-effect rounded-2xl p-6 border border-white/20 space-y-5"
         >
-          <h3 className="text-lg font-bold text-white mb-4">Choose AI Provider</h3>
-          
+          <h3 className="text-lg font-bold text-white">AI Provider Settings</h3>
+
           <div>
             <label className="block text-white/70 text-sm font-medium mb-2">Select AI Provider</label>
             <select
               value={settings.aiProvider}
               onChange={(e) => updateSettings('aiProvider', e.target.value)}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-white/40"
-              style={{ color: '#ffffff' }}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400"
             >
-              <option value="groq" style={{ color: '#000000', backgroundColor: '#ffffff' }}>Groq (Free - Fast)</option>
-              <option value="together" style={{ color: '#000000', backgroundColor: '#ffffff' }}>Together AI (Free)</option>
-              <option value="huggingface" style={{ color: '#000000', backgroundColor: '#ffffff' }}>Hugging Face (Free)</option>
-              <option value="openai" style={{ color: '#000000', backgroundColor: '#ffffff' }}>OpenAI GPT (Paid)</option>
-              <option value="anthropic" style={{ color: '#000000', backgroundColor: '#ffffff' }}>Anthropic Claude (Paid)</option>
-              <option value="mock" style={{ color: '#000000', backgroundColor: '#ffffff' }}>Mock (Demo Only)</option>
+              <option value="mock" style={{ color: '#000', backgroundColor: '#fff' }}>Demo Mode (no key needed)</option>
+              <option value="groq" style={{ color: '#000', backgroundColor: '#fff' }}>Groq — free, fast (llama-3.1)</option>
+              <option value="together" style={{ color: '#000', backgroundColor: '#fff' }}>Together AI — free tier</option>
+              <option value="huggingface" style={{ color: '#000', backgroundColor: '#fff' }}>Hugging Face — free tier</option>
+              <option value="openai" style={{ color: '#000', backgroundColor: '#fff' }}>OpenAI GPT-3.5</option>
+              <option value="anthropic" style={{ color: '#000', backgroundColor: '#fff' }}>Anthropic Claude</option>
             </select>
           </div>
 
-          <div className="mt-4 p-3 bg-white/5 rounded-lg">
-            <p className="text-white/60 text-sm mb-3">
-              {settings.aiProvider === 'groq' && 'Free Groq AI ready! Fast responses included.'}
-              {settings.aiProvider === 'together' && 'Free Together AI available with your API key.'}
-              {settings.aiProvider === 'huggingface' && 'Free Hugging Face available with your API key.'}
-              {settings.aiProvider === 'openai' && 'OpenAI GPT requires your API key.'}
-              {settings.aiProvider === 'anthropic' && 'Anthropic Claude requires your API key.'}
-              {settings.aiProvider === 'mock' && 'Using demo responses. Try free AI options for real responses!'}
-            </p>
-            
-            {/* Security Information */}
-            <div className="mt-3 p-2 bg-green-500/10 rounded-lg border border-green-500/20">
-              <div className="flex items-center space-x-2 mb-2">
-                <span className="text-green-400">Shield</span>
-                <p className="text-green-400 text-xs font-medium">Security Protected</p>
-              </div>
-              <p className="text-white/50 text-xs">
-                All inputs are sanitized and validated with prompt injection protection to ensure safe AI interactions.
+          {settings.aiProvider !== 'mock' && (
+            <div>
+              <label className="flex items-center space-x-1 text-white/70 text-sm font-medium mb-2">
+                <Key className="w-4 h-4" />
+                <span>
+                  {settings.aiProvider === 'groq' && 'Groq API Key'}
+                  {settings.aiProvider === 'together' && 'Together AI API Key'}
+                  {settings.aiProvider === 'huggingface' && 'Hugging Face API Key'}
+                  {settings.aiProvider === 'openai' && 'OpenAI API Key'}
+                  {settings.aiProvider === 'anthropic' && 'Anthropic API Key'}
+                </span>
+              </label>
+              <input
+                type="password"
+                value={
+                  settings.aiProvider === 'groq' ? settings.groqApiKey :
+                  settings.aiProvider === 'together' ? settings.togetherApiKey :
+                  settings.aiProvider === 'huggingface' ? settings.huggingfaceApiKey :
+                  settings.aiProvider === 'openai' ? settings.openaiApiKey :
+                  settings.aiProvider === 'anthropic' ? settings.anthropicApiKey : ''
+                }
+                onChange={(e) => {
+                  const keyMap = {
+                    groq: 'groqApiKey', together: 'togetherApiKey',
+                    huggingface: 'huggingfaceApiKey', openai: 'openaiApiKey',
+                    anthropic: 'anthropicApiKey'
+                  };
+                  updateSettings(keyMap[settings.aiProvider], e.target.value);
+                }}
+                placeholder="Paste your API key here..."
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-primary-400 font-mono text-sm"
+              />
+              <p className="text-white/40 text-xs mt-2">
+                {settings.aiProvider === 'groq' && 'Get a free key at console.groq.com'}
+                {settings.aiProvider === 'together' && 'Get a free key at api.together.xyz'}
+                {settings.aiProvider === 'huggingface' && 'Get a free key at huggingface.co/settings/tokens'}
+                {settings.aiProvider === 'openai' && 'Get your key at platform.openai.com/api-keys'}
+                {settings.aiProvider === 'anthropic' && 'Get your key at console.anthropic.com'}
               </p>
             </div>
-            
-            {/* Usage and Management Information */}
-            {settings.aiProvider === 'groq' && (
-              <div className="space-y-2 text-white/50 text-xs">
-                <div className="flex items-start space-x-2">
-                  <span className="text-yellow-400">!</span>
-                  <p><strong>Usage Limits:</strong> Shared key has rate limits for all users</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-blue-">$</span>
-                  <p><strong>Cost Management:</strong> All users draw from shared quota</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-green-400">%</span>
-                  <p><strong>Monitoring:</strong> Track usage on your Groq dashboard</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-purple-400">+</span>
-                  <p><strong>Scalability:</strong> May need additional keys for many users</p>
-                </div>
-              </div>
-            )}
-            
-            {settings.aiProvider === 'together' && (
-              <div className="space-y-2 text-white/50 text-xs">
-                <div className="flex items-start space-x-2">
-                  <span className="text-yellow-400">!</span>
-                  <p><strong>Usage Limits:</strong> Free tier has monthly request limits</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-blue-400">$</span>
-                  <p><strong>Cost Management:</strong> Free tier available, paid for higher limits</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-green-400">%</span>
-                  <p><strong>Monitoring:</strong> Track usage on Together.ai dashboard</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-purple-400">+</span>
-                  <p><strong>Scalability:</strong> Multiple API keys can be configured</p>
-                </div>
-              </div>
-            )}
-            
-            {settings.aiProvider === 'huggingface' && (
-              <div className="space-y-2 text-white/50 text-xs">
-                <div className="flex items-start space-x-2">
-                  <span className="text-yellow-400">!</span>
-                  <p><strong>Usage Limits:</strong> Free tier has inference limits</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-blue-400">$</span>
-                  <p><strong>Cost Management:</strong> Pay-as-you-go pricing available</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-green-400">%</span>
-                  <p><strong>Monitoring:</strong> Track usage on Hugging Face dashboard</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-purple-400">+</span>
-                  <p><strong>Scalability:</strong> Multiple models and endpoints available</p>
-                </div>
-              </div>
-            )}
-            
-            {['openai', 'anthropic'].includes(settings.aiProvider) && (
-              <div className="space-y-2 text-white/50 text-xs">
-                <div className="flex items-start space-x-2">
-                  <span className="text-yellow-400">!</span>
-                  <p><strong>Usage Limits:</strong> Based on your API key limits</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-blue-400">$</span>
-                  <p><strong>Cost Management:</strong> Pay-per-use pricing model</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-green-400">%</span>
-                  <p><strong>Monitoring:</strong> Track usage on provider dashboard</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-purple-400">+</span>
-                  <p><strong>Scalability:</strong> Enterprise plans available</p>
-                </div>
-              </div>
-            )}
+          )}
+
+          <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+            <p className="text-green-400 text-xs font-medium mb-1">Keys stored locally</p>
+            <p className="text-white/50 text-xs">
+              Your API keys are saved only in your browser and never sent to our servers.
+            </p>
           </div>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={testAPIConnection}
+            disabled={loading || settings.aiProvider === 'mock'}
+            className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm rounded-xl transition-all disabled:opacity-40"
+          >
+            {loading ? 'Testing...' : 'Test Connection'}
+          </motion.button>
         </motion.div>
       )}
 

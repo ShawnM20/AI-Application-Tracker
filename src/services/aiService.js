@@ -76,7 +76,7 @@ class AIService {
     }
 
     const sanitized = this.sanitizeInput(input);
-    
+
     if (!sanitized || sanitized.length < 2) {
       return { valid: false, error: 'Input too short after sanitization' };
     }
@@ -85,27 +85,20 @@ class AIService {
       return { valid: false, error: 'Input too long' };
     }
 
-    // Check for remaining suspicious patterns
-    const suspiciousPatterns = [
-      /ignore/gi,
-      /forget/gi,
-      /disregard/gi,
-      /override/gi,
-      /bypass/gi,
-      /admin/gi,
-      /root/gi,
-      /privilege/gi,
-      /escalate/gi,
-      /execute/gi,
-      /run/gi,
-      /command/gi,
-      /script/gi,
-      /code/gi,
-      /hack/gi,
-      /exploit/gi,
+    // Check for actual prompt injection attempts (multi-word patterns, not single words)
+    const injectionPatterns = [
+      /ignore\s+(previous|all|above|prior)\s+instructions?/gi,
+      /forget\s+(everything|all|your\s+instructions?)/gi,
+      /you\s+are\s+now\s+(a|an)\s+/gi,
+      /act\s+as\s+(a|an)\s+/gi,
+      /new\s+(role|instructions?|persona)\s*:/gi,
+      /disregard\s+(all|previous|your)/gi,
+      /system\s+override/gi,
+      /jailbreak/gi,
+      /dan\s+mode/gi,
     ];
 
-    for (const pattern of suspiciousPatterns) {
+    for (const pattern of injectionPatterns) {
       if (pattern.test(sanitized)) {
         return { valid: false, error: 'Input contains suspicious content' };
       }
@@ -137,25 +130,17 @@ Always maintain professional, helpful responses focused on interview preparation
   }
 
   buildSecurePrompt(jobTitle, company, experience) {
-    // Validate and sanitize all inputs
+    // Validate required job title
     const jobTitleValidation = this.validateInput(jobTitle);
     if (!jobTitleValidation.valid) {
       throw new Error('Invalid job title: ' + jobTitleValidation.error);
     }
 
-    const companyValidation = this.validateInput(company);
-    if (!companyValidation.valid) {
-      throw new Error('Invalid company name: ' + companyValidation.error);
-    }
-
-    const experienceValidation = this.validateInput(experience);
-    if (!experienceValidation.valid) {
-      throw new Error('Invalid experience level: ' + experienceValidation.error);
-    }
-
     const sanitizedJobTitle = jobTitleValidation.sanitized;
-    const sanitizedCompany = companyValidation.sanitized;
-    const sanitizedExperience = experienceValidation.sanitized;
+
+    // Sanitize optional fields without throwing on empty values
+    const sanitizedCompany = company ? this.sanitizeInput(company) : '';
+    const sanitizedExperience = experience ? this.sanitizeInput(experience) : '';
 
     return `Generate comprehensive interview preparation for a ${sanitizedJobTitle} position${sanitizedCompany ? ` at ${sanitizedCompany}` : ''}. Experience level: ${sanitizedExperience || 'Not specified'}.
 
@@ -324,7 +309,10 @@ Remember: Focus only on interview preparation and career guidance.`;
 
   // Groq API integration (Free tier available)
   async generateWithGroq(jobTitle, company, experience) {
-    const apiKey = this.settings.groqApiKey || process.env.REACT_APP_GROQ_API_KEY || 'gsk_2xWk6qLQ2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q'; // Free demo key
+    const apiKey = this.settings.groqApiKey || process.env.REACT_APP_GROQ_API_KEY;
+    if (!apiKey) {
+      throw new Error('Groq API key is required. Get a free key at console.groq.com, then enter it in Settings.');
+    }
     const prompt = this.buildSecurePrompt(jobTitle, company, experience);
     const systemPrompt = this.createSecureSystemPrompt();
     
@@ -368,7 +356,10 @@ Remember: Focus only on interview preparation and career guidance.`;
 
   // Together AI API integration (Free tier available)
   async generateWithTogether(jobTitle, company, experience) {
-    const apiKey = this.settings.togetherApiKey || 'YOUR_FREE_TOGETHER_API_KEY'; // Users can get free key
+    const apiKey = this.settings.togetherApiKey || process.env.REACT_APP_TOGETHER_API_KEY;
+    if (!apiKey) {
+      throw new Error('Together AI API key is required. Get a free key at api.together.xyz, then enter it in Settings.');
+    }
     const prompt = this.buildSecurePrompt(jobTitle, company, experience);
     const systemPrompt = this.createSecureSystemPrompt();
     
@@ -412,7 +403,10 @@ Remember: Focus only on interview preparation and career guidance.`;
 
   // Hugging Face API integration (Free tier available)
   async generateWithHuggingFace(jobTitle, company, experience) {
-    const apiKey = this.settings.huggingfaceApiKey || 'YOUR_FREE_HUGGINGFACE_API_KEY'; // Users can get free key
+    const apiKey = this.settings.huggingfaceApiKey || process.env.REACT_APP_HUGGINGFACE_API_KEY;
+    if (!apiKey) {
+      throw new Error('Hugging Face API key is required. Get a free key at huggingface.co/settings/tokens, then enter it in Settings.');
+    }
     const prompt = this.buildSecurePrompt(jobTitle, company, experience);
     
     try {

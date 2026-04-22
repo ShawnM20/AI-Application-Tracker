@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,7 +20,14 @@ import {
   Phone,
   Mail,
   User,
-  MessageSquare
+  MessageSquare,
+  Search,
+  Filter,
+  TrendingUp,
+  Building,
+  Target,
+  Star,
+  AlertCircle
 } from 'lucide-react';
 import { userStorage } from '../utils/storage';
 
@@ -28,6 +35,9 @@ const ApplicationTracker = ({ applications, setApplications }) => {
   const { currentUser } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editingApp, setEditingApp] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('date');
   const [formData, setFormData] = useState({
     company: '',
     position: '',
@@ -45,6 +55,7 @@ const ApplicationTracker = ({ applications, setApplications }) => {
   });
   const [showNotes, setShowNotes] = useState(null);
   const [noteText, setNoteText] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -94,7 +105,8 @@ const ApplicationTracker = ({ applications, setApplications }) => {
 
   const handleDelete = (id) => {
     setApplications(apps => apps.filter(app => app.id !== id));
-    toast.success('Application deleted successfully!');
+    setDeleteConfirm(null);
+    toast.success('Application deleted.');
   };
 
   const exportData = () => {
@@ -156,73 +168,159 @@ const ApplicationTracker = ({ applications, setApplications }) => {
     return userStorage.getUserNotes(currentUser.id).filter(note => note.applicationId === applicationId);
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'interview':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'applied':
-        return <Clock className="w-4 h-4" />;
-      case 'rejected':
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return <Clock className="w-4 h-4" />;
-    }
-  };
+  const filteredAndSortedApplications = useMemo(() => {
+    return applications
+      .filter(app => {
+        const search = searchTerm.toLowerCase();
+        const matchesSearch = !search ||
+          (app.company || '').toLowerCase().includes(search) ||
+          (app.position || '').toLowerCase().includes(search) ||
+          (app.location || '').toLowerCase().includes(search);
+        const matchesFilter = filterStatus === 'all' || app.status === filterStatus;
+        return matchesSearch && matchesFilter;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'date') return new Date(b.date) - new Date(a.date);
+        if (sortBy === 'company') return (a.company || '').localeCompare(b.company || '');
+        if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
+        return 0;
+      });
+  }, [applications, searchTerm, filterStatus, sortBy]);
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'interview':
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'applied':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'rejected':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
-      default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+      case 'applied': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+      case 'interview': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+      case 'offer': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/30';
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'applied': return <Clock className="w-4 h-4" />;
+      case 'interview': return <Briefcase className="w-4 h-4" />;
+      case 'offer': return <CheckCircle className="w-4 h-4" />;
+      case 'rejected': return <XCircle className="w-4 h-4" />;
+      default: return <AlertCircle className="w-4 h-4" />;
     }
   };
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-white mb-2">Application Tracker</h2>
-          <p className="text-white/70">Manage your job applications and track their progress</p>
+      {/* Header with Stats */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-6"
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div>
+            <h2 className="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">
+              Application Tracker
+            </h2>
+            <p className="text-white/70 text-lg">Manage your job applications and track their progress</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={exportData}
+              className="bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-xl flex items-center space-x-2 transition-all duration-200 border border-white/20 hover:shadow-lg"
+            >
+              <Download className="w-5 h-5" />
+              <span className="hidden sm:inline">Export</span>
+            </motion.button>
+            
+            <label className="bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-xl flex items-center space-x-2 cursor-pointer transition-all duration-200 border border-white/20 hover:shadow-lg">
+              <Upload className="w-5 h-5" />
+              <span className="hidden sm:inline">Import</span>
+              <input
+                type="file"
+                accept=".json"
+                onChange={importData}
+                className="hidden"
+              />
+            </label>
+            
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowForm(true)}
+              className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add Application</span>
+            </motion.button>
+          </div>
         </div>
-        <div className="flex space-x-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={exportData}
-            className="bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-xl flex items-center space-x-2 transition-colors"
-          >
-            <Download className="w-5 h-5" />
-            <span>Export</span>
-          </motion.button>
-          
-          <label className="bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-xl flex items-center space-x-2 cursor-pointer transition-colors">
-            <Upload className="w-5 h-5" />
-            <span>Import</span>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Total', value: applications.length, icon: Briefcase, color: 'from-blue-500 to-cyan-500' },
+            { label: 'Applied', value: applications.filter(a => a.status === 'applied').length, icon: Clock, color: 'from-blue-500 to-blue-600' },
+            { label: 'Interviews', value: applications.filter(a => a.status === 'interview').length, icon: Briefcase, color: 'from-purple-500 to-pink-500' },
+            { label: 'Offers', value: applications.filter(a => a.status === 'offer').length, icon: CheckCircle, color: 'from-green-500 to-emerald-500' },
+          ].map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className="glass-effect rounded-xl p-4 border border-white/10"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/60 text-sm">{stat.label}</p>
+                  <p className="text-2xl font-bold text-white">{stat.value}</p>
+                </div>
+                <div className={`w-10 h-10 bg-gradient-to-r ${stat.color} rounded-lg flex items-center justify-center`}>
+                  <stat.icon className="w-5 h-5 text-white" />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Search and Filters */}
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
             <input
-              type="file"
-              accept=".json"
-              onChange={importData}
-              className="hidden"
+              type="text"
+              placeholder="Search applications..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all"
             />
-          </label>
+          </div>
           
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowForm(true)}
-            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl flex items-center space-x-2"
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all"
           >
-            <Plus className="w-5 h-5" />
-            <span>Add Application</span>
-          </motion.button>
+            <option value="all" style={{ color: '#000', backgroundColor: '#fff' }}>All Status</option>
+            <option value="applied" style={{ color: '#000', backgroundColor: '#fff' }}>Applied</option>
+            <option value="interview" style={{ color: '#000', backgroundColor: '#fff' }}>Interview</option>
+            <option value="offer" style={{ color: '#000', backgroundColor: '#fff' }}>Offer</option>
+            <option value="rejected" style={{ color: '#000', backgroundColor: '#fff' }}>Rejected</option>
+            <option value="withdrawn" style={{ color: '#000', backgroundColor: '#fff' }}>Withdrawn</option>
+          </select>
+          
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all"
+          >
+            <option value="date" style={{ color: '#000', backgroundColor: '#fff' }}>Sort by Date</option>
+            <option value="company" style={{ color: '#000', backgroundColor: '#fff' }}>Sort by Company</option>
+            <option value="status" style={{ color: '#000', backgroundColor: '#fff' }}>Sort by Status</option>
+          </select>
         </div>
-      </div>
+      </motion.div>
 
       {/* Add/Edit Form */}
       {showForm && (
@@ -411,13 +509,13 @@ const ApplicationTracker = ({ applications, setApplications }) => {
 
       {/* Applications List */}
       <div className="space-y-4">
-        {applications.length > 0 ? (
-          applications.map((app, index) => (
+        {filteredAndSortedApplications.length > 0 ? (
+          filteredAndSortedApplications.map((app, index) => (
             <motion.div
               key={app.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
+              transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.4) }}
               className="glass-effect rounded-2xl p-6 card-hover"
             >
               <div className="flex items-start justify-between">
@@ -521,14 +619,33 @@ const ApplicationTracker = ({ applications, setApplications }) => {
                     >
                       <MessageSquare className="w-4 h-4 text-white" />
                     </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleDelete(app.id)}
-                      className="w-8 h-8 bg-red-500/20 hover:bg-red-500/30 rounded-lg flex items-center justify-center transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-400" />
-                    </motion.button>
+                    {deleteConfirm === app.id ? (
+                      <div className="flex items-center space-x-1">
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleDelete(app.id)}
+                          className="px-2 py-1 bg-red-500/40 hover:bg-red-500/60 text-red-300 text-xs rounded-lg transition-colors"
+                        >
+                          Delete
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setDeleteConfirm(null)}
+                          className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white/60 text-xs rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </motion.button>
+                      </div>
+                    ) : (
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setDeleteConfirm(app.id)}
+                        className="w-8 h-8 bg-red-500/20 hover:bg-red-500/30 rounded-lg flex items-center justify-center transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </motion.button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -584,7 +701,7 @@ const ApplicationTracker = ({ applications, setApplications }) => {
             )}
             </motion.div>
           ))
-        ) : (
+        ) : applications.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -601,6 +718,24 @@ const ApplicationTracker = ({ applications, setApplications }) => {
             >
               <Plus className="w-5 h-5" />
               <span>Add Your First Application</span>
+            </motion.button>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="glass-effect rounded-2xl p-12 text-center"
+          >
+            <Search className="w-16 h-16 text-white/20 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">No Results Found</h3>
+            <p className="text-white/60 mb-4">No applications match your current filters</p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => { setSearchTerm(''); setFilterStatus('all'); }}
+              className="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-xl transition-colors text-sm"
+            >
+              Clear Filters
             </motion.button>
           </motion.div>
         )}

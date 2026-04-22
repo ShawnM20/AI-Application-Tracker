@@ -1,53 +1,41 @@
-// Multiple UI themes for the AI Application Tracker
+// Professional UI themes for the AI Application Tracker
 export const themes = {
-  // Original Purple Gradient Theme
+  // Professional Purple Theme
   purple: {
-    name: 'Purple Gradient',
+    name: 'Professional Purple',
     primary: {
-      50: '#f3e8ff',
-      100: '#e9d5ff',
-      200: '#d8b4fe',
-      300: '#c084fc',
-      400: '#a855f7',
-      500: '#9333ea',
+      50: '#f5f3ff',
+      100: '#ede9fe',
+      200: '#ddd6fe',
+      300: '#c4b5fd',
+      400: '#a78bfa',
+      500: '#8b5cf6',
       600: '#7c3aed',
       700: '#6d28d9',
       800: '#5b21b6',
       900: '#4c1d95',
     },
     secondary: {
-      50: '#faf5ff',
-      100: '#f3e8ff',
-      200: '#e9d5ff',
-      300: '#d8b4fe',
-      400: '#c084fc',
-      500: '#a855f7',
-      600: '#9333ea',
-      700: '#7c3aed',
-      800: '#6d28d9',
-      900: '#5b21b6',
+      50: '#fdf4ff',
+      100: '#fae8ff',
+      200: '#f5d0fe',
+      300: '#f0abfc',
+      400: '#e879f9',
+      500: '#d946ef',
+      600: '#c026d3',
+      700: '#a21caf',
+      800: '#86198f',
+      900: '#701a75',
     },
-    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    glass: 'rgba(255, 255, 255, 0.1)',
-    glassBorder: 'rgba(255, 255, 255, 0.2)',
+    gradient: 'linear-gradient(135deg, #0f0c1d 0%, #1a0f3d 40%, #0e1e45 75%, #0a1628 100%)',
+    glass: 'rgba(255, 255, 255, 0.07)',
+    glassBorder: 'rgba(255, 255, 255, 0.12)',
   },
 
-  // Ocean Blue Theme
+  // Professional Ocean Blue Theme
   ocean: {
     name: 'Ocean Blue',
     primary: {
-      50: '#eff6ff',
-      100: '#dbeafe',
-      200: '#bfdbfe',
-      300: '#93c5fd',
-      400: '#60a5fa',
-      500: '#3b82f6',
-      600: '#2563eb',
-      700: '#1d4ed8',
-      800: '#1e40af',
-      900: '#1e3a8a',
-    },
-    secondary: {
       50: '#f0f9ff',
       100: '#e0f2fe',
       200: '#bae6fd',
@@ -59,12 +47,24 @@ export const themes = {
       800: '#075985',
       900: '#0c4a6e',
     },
-    gradient: 'linear-gradient(135deg, #0077be 0%, #00a8cc 100%)',
+    secondary: {
+      50: '#ecfeff',
+      100: '#cffafe',
+      200: '#a5f3fc',
+      300: '#67e8f9',
+      400: '#22d3ee',
+      500: '#06b6d4',
+      600: '#0891b2',
+      700: '#0e7490',
+      800: '#155e75',
+      900: '#164e63',
+    },
+    gradient: 'linear-gradient(135deg, #050e1f 0%, #0a2040 45%, #0c3050 100%)',
     glass: 'rgba(255, 255, 255, 0.08)',
-    glassBorder: 'rgba(255, 255, 255, 0.15)',
+    glassBorder: 'rgba(255, 255, 255, 0.14)',
   },
 
-  // Forest Green Theme
+  // Professional Forest Green Theme
   forest: {
     name: 'Forest Green',
     primary: {
@@ -80,25 +80,25 @@ export const themes = {
       900: '#14532d',
     },
     secondary: {
-      50: '#f7fee7',
-      100: '#ecfccb',
-      200: '#d9f99d',
-      300: '#bef264',
-      400: '#a3e635',
-      500: '#84cc16',
-      600: '#65a30d',
-      700: '#4d7c0f',
-      800: '#365314',
-      900: '#1a2e05',
+      50: '#f0fdfa',
+      100: '#ccfbf1',
+      200: '#99f6e4',
+      300: '#5eead4',
+      400: '#2dd4bf',
+      500: '#14b8a6',
+      600: '#0d9488',
+      700: '#0f766e',
+      800: '#115e59',
+      900: '#134e4a',
     },
-    gradient: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)',
-    glass: 'rgba(255, 255, 255, 0.12)',
-    glassBorder: 'rgba(255, 255, 255, 0.2)',
+    gradient: 'linear-gradient(135deg, #071a10 0%, #0d3320 45%, #0a2a1e 100%)',
+    glass: 'rgba(255, 255, 255, 0.08)',
+    glassBorder: 'rgba(255, 255, 255, 0.14)',
   },
 
-  // Sunset Orange Theme
+  // Professional Sunset Theme
   sunset: {
-    name: 'Sunset Orange',
+    name: 'Sunset',
     primary: {
       50: '#fff7ed',
       100: '#ffedd5',
@@ -112,23 +112,23 @@ export const themes = {
       900: '#7c2d12',
     },
     secondary: {
-      50: '#fef3c7',
-      100: '#fde68a',
-      200: '#fcd34d',
-      300: '#fbbf24',
-      400: '#f59e0b',
-      500: '#d97706',
-      600: '#b45309',
-      700: '#92400e',
-      800: '#78350f',
-      900: '#451a03',
+      50: '#fefce8',
+      100: '#fef9c3',
+      200: '#fef08a',
+      300: '#fde047',
+      400: '#facc15',
+      500: '#eab308',
+      600: '#ca8a04',
+      700: '#a16207',
+      800: '#854d0e',
+      900: '#713f12',
     },
-    gradient: 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)',
-    glass: 'rgba(255, 255, 255, 0.15)',
-    glassBorder: 'rgba(255, 255, 255, 0.25)',
+    gradient: 'linear-gradient(135deg, #1f0a0a 0%, #3d1508 45%, #2a1005 100%)',
+    glass: 'rgba(255, 255, 255, 0.09)',
+    glassBorder: 'rgba(255, 255, 255, 0.15)',
   },
 
-  // Midnight Dark Theme
+  // Professional Midnight Theme
   midnight: {
     name: 'Midnight Dark',
     primary: {
@@ -155,9 +155,9 @@ export const themes = {
       800: '#1e293b',
       900: '#0f172a',
     },
-    gradient: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-    glass: 'rgba(255, 255, 255, 0.05)',
-    glassBorder: 'rgba(255, 255, 255, 0.1)',
+    gradient: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #533483 100%)',
+    glass: 'rgba(255, 255, 255, 0.08)',
+    glassBorder: 'rgba(255, 255, 255, 0.12)',
   },
 
   // Rose Pink Theme
@@ -187,9 +187,9 @@ export const themes = {
       800: '#9d174d',
       900: '#831843',
     },
-    gradient: 'linear-gradient(135deg, #ff6ec7 0%, #c73e1d 100%)',
-    glass: 'rgba(255, 255, 255, 0.18)',
-    glassBorder: 'rgba(255, 255, 255, 0.28)',
+    gradient: 'linear-gradient(135deg, #1a0510 0%, #3d0a20 50%, #1a0530 100%)',
+    glass: 'rgba(255, 255, 255, 0.08)',
+    glassBorder: 'rgba(255, 255, 255, 0.14)',
   },
 
   // Teal Cyan Theme
@@ -219,9 +219,9 @@ export const themes = {
       800: '#115e59',
       900: '#134e4a',
     },
-    gradient: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 50%, #22d3ee 100%)',
-    glass: 'rgba(255, 255, 255, 0.1)',
-    glassBorder: 'rgba(255, 255, 255, 0.18)',
+    gradient: 'linear-gradient(135deg, #030f14 0%, #062030 50%, #041a28 100%)',
+    glass: 'rgba(255, 255, 255, 0.08)',
+    glassBorder: 'rgba(255, 255, 255, 0.13)',
   },
 
   // Golden Theme
@@ -251,9 +251,9 @@ export const themes = {
       800: '#92400e',
       900: '#78350f',
     },
-    gradient: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
-    glass: 'rgba(255, 255, 255, 0.2)',
-    glassBorder: 'rgba(255, 255, 255, 0.3)',
+    gradient: 'linear-gradient(135deg, #1a1200 0%, #332200 50%, #1a1600 100%)',
+    glass: 'rgba(255, 255, 255, 0.09)',
+    glassBorder: 'rgba(255, 255, 255, 0.15)',
   },
 };
 
