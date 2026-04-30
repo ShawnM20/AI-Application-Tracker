@@ -52,7 +52,8 @@ export const AuthProvider = ({ children }) => {
       if (firebaseUser) {
         let profile = null;
         try {
-          profile = await getUserProfile(firebaseUser.uid);
+          const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3000));
+          profile = await Promise.race([getUserProfile(firebaseUser.uid), timeout]);
         } catch (e) {
           console.error('Failed to load user profile from Firestore:', e.message);
         }
