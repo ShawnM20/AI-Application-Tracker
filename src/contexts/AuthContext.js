@@ -50,7 +50,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const profile = await getUserProfile(firebaseUser.uid);
+        let profile = null;
+        try {
+          profile = await getUserProfile(firebaseUser.uid);
+        } catch (e) {
+          console.error('Failed to load user profile from Firestore:', e.message);
+        }
         setCurrentUser({
           id:        firebaseUser.uid,
           uid:       firebaseUser.uid,
@@ -82,12 +87,16 @@ export const AuthProvider = ({ children }) => {
     try {
       const { user } = await createUserWithEmailAndPassword(auth, email, password);
       await firebaseUpdateProfile(user, { displayName: `${firstName} ${lastName}` });
-      await setUserProfile(user.uid, {
-        firstName,
-        lastName,
-        email,
-        createdAt: new Date().toISOString(),
-      });
+      try {
+        await setUserProfile(user.uid, {
+          firstName,
+          lastName,
+          email,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (profileErr) {
+        console.error('Profile save failed (non-fatal):', profileErr.message);
+      }
       return { success: true };
     } catch (err) {
       return { success: false, error: friendlyError(err.code) };
