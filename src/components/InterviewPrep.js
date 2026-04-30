@@ -15,16 +15,15 @@ import {
   MessageSquare,
   Loader2,
   Settings,
-  AlertCircle,
   Mic,
   MicOff,
   Award,
   Sparkles,
-  Key
 } from 'lucide-react';
 import aiService from '../services/aiService';
 import { useAuth } from '../contexts/AuthContext';
-import { userStorage } from '../utils/storage';
+import { getSettings, saveSettings } from '../utils/db';
+import { settingsStorage } from '../utils/storage';
 
 const InterviewPrep = () => {
   const { currentUser } = useAuth();
@@ -41,7 +40,7 @@ const InterviewPrep = () => {
 
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState({
-    aiProvider: 'groq',
+    aiProvider: 'groq', // uses REACT_APP_GROQ_API_KEY from env
     groqApiKey: '',
     togetherApiKey: '',
     huggingfaceApiKey: '',
@@ -59,23 +58,15 @@ const InterviewPrep = () => {
   });
 
   useEffect(() => {
-    if (currentUser) {
-      const userSettings = userStorage.getUserSettings(currentUser.id);
-      setSettings({
-        aiProvider: userSettings.aiProvider || 'groq',
-        groqApiKey: userSettings.groqApiKey || '',
-        togetherApiKey: userSettings.togetherApiKey || '',
-        huggingfaceApiKey: userSettings.huggingfaceApiKey || '',
-        openaiApiKey: userSettings.openaiApiKey || '',
-        anthropicApiKey: userSettings.anthropicApiKey || '',
-        theme: userSettings.theme || 'purple',
-        darkMode: userSettings.darkMode || false,
-        notifications: userSettings.notifications !== undefined ? userSettings.notifications : true,
-        defaultExperience: userSettings.defaultExperience || '',
-        autoSave: userSettings.autoSave !== undefined ? userSettings.autoSave : true
-      });
-    }
-  }, [currentUser]);
+    if (!currentUser) return;
+    getSettings(currentUser.uid).then((saved) => {
+      if (saved && Object.keys(saved).length > 0) {
+        setSettings((prev) => ({ ...prev, ...saved }));
+        // Sync to localStorage so aiService can read synchronously
+        settingsStorage.set({ ...settings, ...saved });
+      }
+    });
+  }, [currentUser]); // eslint-disable-line
 
   const generateInterviewPrep = async () => {
     if (!jobTitle) {
@@ -100,11 +91,13 @@ const InterviewPrep = () => {
 
   const updateSettings = (key, value) => {
     if (!currentUser) return;
-    
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
-    userStorage.updateUserSettings(currentUser.id, newSettings);
+    // Keep localStorage in sync so aiService can read synchronously
+    settingsStorage.set(newSettings);
     aiService.updateSettings();
+    // Persist to Firestore (fire-and-forget)
+    saveSettings(currentUser.uid, newSettings);
   };
 
   const testAPIConnection = async () => {
@@ -176,7 +169,7 @@ const InterviewPrep = () => {
         animate={{ opacity: 1, y: 0 }}
         className="glass-effect rounded-2xl p-8 border border-white/10"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div>
             <label className="block text-white/70 text-sm font-medium mb-2">Job Title *</label>
             <div className="relative">
@@ -216,63 +209,6 @@ const InterviewPrep = () => {
               <option value="senior" style={{ color: '#000', backgroundColor: '#fff' }}>Senior Level (5+ years)</option>
               <option value="lead" style={{ color: '#000', backgroundColor: '#fff' }}>Lead/Manager</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Question Type</label>
-            <select
-              value={settings.questionType}
-              onChange={(e) => updateSettings('questionType', e.target.value)}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all appearance-none cursor-pointer"
-            >
-              <option value="behavioral" style={{ color: '#000', backgroundColor: '#fff' }}>Behavioral Questions</option>
-              <option value="technical" style={{ color: '#000', backgroundColor: '#fff' }}>Technical Questions</option>
-              <option value="situational" style={{ color: '#000', backgroundColor: '#fff' }}>Situational Questions</option>
-              <option value="mixed" style={{ color: '#000', backgroundColor: '#fff' }}>Mixed Questions</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Difficulty</label>
-            <select
-              value={settings.difficulty}
-              onChange={(e) => updateSettings('difficulty', e.target.value)}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all appearance-none cursor-pointer"
-            >
-              <option value="easy" style={{ color: '#000', backgroundColor: '#fff' }}>Easy</option>
-              <option value="medium" style={{ color: '#000', backgroundColor: '#fff' }}>Medium</option>
-              <option value="hard" style={{ color: '#000', backgroundColor: '#fff' }}>Hard</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">AI Provider</label>
-            <select
-              value={settings.aiProvider}
-              onChange={(e) => updateSettings('aiProvider', e.target.value)}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400 focus:bg-white/15 transition-all appearance-none cursor-pointer"
-            >
-              <option value="groq" style={{ color: '#000', backgroundColor: '#fff' }}>Groq (Fast)</option>
-              <option value="openai" style={{ color: '#000', backgroundColor: '#fff' }}>OpenAI (GPT-4)</option>
-              <option value="anthropic" style={{ color: '#000', backgroundColor: '#fff' }}>Anthropic (Claude)</option>
-              <option value="together" style={{ color: '#000', backgroundColor: '#fff' }}>Together AI</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Voice Recording</label>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => updateSettings('voiceEnabled', !settings.voiceEnabled)}
-              className={`w-full px-4 py-3 rounded-xl flex items-center justify-center space-x-2 transition-all ${
-                settings.voiceEnabled 
-                  ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                  : 'bg-white/10 text-white/70 border border-white/20'
-              }`}
-            >
-              {settings.voiceEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-              <span>{settings.voiceEnabled ? 'Voice Enabled' : 'Voice Disabled'}</span>
-            </motion.button>
           </div>
         </div>
 
@@ -456,89 +392,60 @@ const InterviewPrep = () => {
         </motion.div>
       )}
 
-      {/* AI Settings Panel */}
+      {/* Settings Panel */}
       {showSettings && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="glass-effect rounded-2xl p-6 border border-white/20 space-y-5"
         >
-          <h3 className="text-lg font-bold text-white">AI Provider Settings</h3>
+          <h3 className="text-lg font-bold text-white">Interview Settings</h3>
 
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Select AI Provider</label>
-            <select
-              value={settings.aiProvider}
-              onChange={(e) => updateSettings('aiProvider', e.target.value)}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400"
-            >
-              <option value="mock" style={{ color: '#000', backgroundColor: '#fff' }}>Demo Mode (no key needed)</option>
-              <option value="groq" style={{ color: '#000', backgroundColor: '#fff' }}>Groq — free, fast (llama-3.1)</option>
-              <option value="together" style={{ color: '#000', backgroundColor: '#fff' }}>Together AI — free tier</option>
-              <option value="huggingface" style={{ color: '#000', backgroundColor: '#fff' }}>Hugging Face — free tier</option>
-              <option value="openai" style={{ color: '#000', backgroundColor: '#fff' }}>OpenAI GPT-3.5</option>
-              <option value="anthropic" style={{ color: '#000', backgroundColor: '#fff' }}>Anthropic Claude</option>
-            </select>
-          </div>
-
-          {settings.aiProvider !== 'mock' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="flex items-center space-x-1 text-white/70 text-sm font-medium mb-2">
-                <Key className="w-4 h-4" />
-                <span>
-                  {settings.aiProvider === 'groq' && 'Groq API Key'}
-                  {settings.aiProvider === 'together' && 'Together AI API Key'}
-                  {settings.aiProvider === 'huggingface' && 'Hugging Face API Key'}
-                  {settings.aiProvider === 'openai' && 'OpenAI API Key'}
-                  {settings.aiProvider === 'anthropic' && 'Anthropic API Key'}
-                </span>
-              </label>
-              <input
-                type="password"
-                value={
-                  settings.aiProvider === 'groq' ? settings.groqApiKey :
-                  settings.aiProvider === 'together' ? settings.togetherApiKey :
-                  settings.aiProvider === 'huggingface' ? settings.huggingfaceApiKey :
-                  settings.aiProvider === 'openai' ? settings.openaiApiKey :
-                  settings.aiProvider === 'anthropic' ? settings.anthropicApiKey : ''
-                }
-                onChange={(e) => {
-                  const keyMap = {
-                    groq: 'groqApiKey', together: 'togetherApiKey',
-                    huggingface: 'huggingfaceApiKey', openai: 'openaiApiKey',
-                    anthropic: 'anthropicApiKey'
-                  };
-                  updateSettings(keyMap[settings.aiProvider], e.target.value);
-                }}
-                placeholder="Paste your API key here..."
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-primary-400 font-mono text-sm"
-              />
-              <p className="text-white/40 text-xs mt-2">
-                {settings.aiProvider === 'groq' && 'Get a free key at console.groq.com'}
-                {settings.aiProvider === 'together' && 'Get a free key at api.together.xyz'}
-                {settings.aiProvider === 'huggingface' && 'Get a free key at huggingface.co/settings/tokens'}
-                {settings.aiProvider === 'openai' && 'Get your key at platform.openai.com/api-keys'}
-                {settings.aiProvider === 'anthropic' && 'Get your key at console.anthropic.com'}
-              </p>
+              <label className="block text-white/70 text-sm font-medium mb-2">Question Type</label>
+              <select
+                value={settings.questionType}
+                onChange={(e) => updateSettings('questionType', e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400"
+              >
+                <option value="behavioral" style={{ color: '#000', backgroundColor: '#fff' }}>Behavioral</option>
+                <option value="technical" style={{ color: '#000', backgroundColor: '#fff' }}>Technical</option>
+                <option value="situational" style={{ color: '#000', backgroundColor: '#fff' }}>Situational</option>
+                <option value="mixed" style={{ color: '#000', backgroundColor: '#fff' }}>Mixed</option>
+              </select>
             </div>
-          )}
 
-          <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-            <p className="text-green-400 text-xs font-medium mb-1">Keys stored locally</p>
-            <p className="text-white/50 text-xs">
-              Your API keys are saved only in your browser and never sent to our servers.
-            </p>
+            <div>
+              <label className="block text-white/70 text-sm font-medium mb-2">Difficulty</label>
+              <select
+                value={settings.difficulty}
+                onChange={(e) => updateSettings('difficulty', e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-primary-400"
+              >
+                <option value="easy" style={{ color: '#000', backgroundColor: '#fff' }}>Easy</option>
+                <option value="medium" style={{ color: '#000', backgroundColor: '#fff' }}>Medium</option>
+                <option value="hard" style={{ color: '#000', backgroundColor: '#fff' }}>Hard</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-white/70 text-sm font-medium mb-2">Voice Recording</label>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => updateSettings('voiceEnabled', !settings.voiceEnabled)}
+                className={`w-full px-4 py-3 rounded-xl flex items-center justify-center space-x-2 transition-all border ${
+                  settings.voiceEnabled
+                    ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                    : 'bg-white/10 text-white/70 border-white/20'
+                }`}
+              >
+                {settings.voiceEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                <span>{settings.voiceEnabled ? 'Voice On' : 'Voice Off'}</span>
+              </motion.button>
+            </div>
           </div>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={testAPIConnection}
-            disabled={loading || settings.aiProvider === 'mock'}
-            className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm rounded-xl transition-all disabled:opacity-40"
-          >
-            {loading ? 'Testing...' : 'Test Connection'}
-          </motion.button>
         </motion.div>
       )}
 

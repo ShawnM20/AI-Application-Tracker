@@ -29,7 +29,7 @@ import {
   Star,
   AlertCircle
 } from 'lucide-react';
-import { userStorage } from '../utils/storage';
+import { addApplication, updateApplication, deleteApplication, addNoteToApplication } from '../utils/db';
 
 const ApplicationTracker = ({ applications, setApplications }) => {
   const { currentUser } = useAuth();
@@ -57,44 +57,33 @@ const ApplicationTracker = ({ applications, setApplications }) => {
   const [noteText, setNoteText] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    if (!currentUser) return;
+
+    const resetForm = () => {
+      setFormData({
+        company: '', position: '', location: '', salary: '',
+        status: 'applied', date: new Date().toISOString().split('T')[0],
+        description: '', jobUrl: '', contactName: '', contactEmail: '',
+        contactPhone: '', followUpDate: '', notes: '',
+      });
+      setShowForm(false);
+      setEditingApp(null);
+    };
+
     if (editingApp) {
-      setApplications(apps => 
-        apps.map(app => 
-          app.id === editingApp.id 
-            ? { ...formData, id: editingApp.id }
-            : app
-        )
-      );
-      toast.success('Application updated successfully!');
+      const updated = { ...formData, id: editingApp.id, notes: editingApp.notes || [] };
+      setApplications(apps => apps.map(app => app.id === editingApp.id ? updated : app));
+      await updateApplication(currentUser.uid, editingApp.id, updated);
+      toast.success('Application updated!');
     } else {
-      const newApp = {
-        ...formData,
-        id: Date.now().toString(),
-      };
-      setApplications([...applications, newApp]);
-      toast.success('Application added successfully!');
+      const newApp = { ...formData, id: Date.now().toString(), notes: [] };
+      setApplications(prev => [newApp, ...prev]);
+      await addApplication(currentUser.uid, newApp);
+      toast.success('Application added!');
     }
-    
-    setFormData({
-      company: '',
-      position: '',
-      location: '',
-      salary: '',
-      status: 'applied',
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      jobUrl: '',
-      contactName: '',
-      contactEmail: '',
-      contactPhone: '',
-      followUpDate: '',
-      notes: '',
-    });
-    setShowForm(false);
-    setEditingApp(null);
+    resetForm();
   };
 
   const handleEdit = (app) => {
@@ -103,9 +92,11 @@ const ApplicationTracker = ({ applications, setApplications }) => {
     setShowForm(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    if (!currentUser) return;
     setApplications(apps => apps.filter(app => app.id !== id));
     setDeleteConfirm(null);
+    await deleteApplication(currentUser.uid, id);
     toast.success('Application deleted.');
   };
 
@@ -148,24 +139,27 @@ const ApplicationTracker = ({ applications, setApplications }) => {
     reader.readAsText(file);
   };
 
-  const addNote = (applicationId) => {
+  const addNote = async (applicationId) => {
     if (!noteText.trim() || !currentUser) return;
-    
     const note = {
       id: Date.now().toString(),
-      applicationId,
       text: noteText,
       timestamp: new Date().toISOString(),
     };
-    
-    userStorage.addUserNote(currentUser.id, note);
+    // Optimistic update
+    setApplications(apps => apps.map(app =>
+      app.id === applicationId
+        ? { ...app, notes: [...(app.notes || []), note] }
+        : app
+    ));
     setNoteText('');
-    toast.success('Note added successfully!');
+    await addNoteToApplication(currentUser.uid, applicationId, note);
+    toast.success('Note added!');
   };
 
   const getNotes = (applicationId) => {
-    if (!currentUser) return [];
-    return userStorage.getUserNotes(currentUser.id).filter(note => note.applicationId === applicationId);
+    const app = applications.find(a => a.id === applicationId);
+    return app?.notes || [];
   };
 
   const filteredAndSortedApplications = useMemo(() => {

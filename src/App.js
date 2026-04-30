@@ -16,37 +16,21 @@ import Auth from './components/Auth';
 import UserProfile from './components/UserProfile';
 import TermsOfService from './components/TermsOfService';
 import PrivacyPolicy from './components/PrivacyPolicy';
-import { userStorage, migrateToUserSpecific, storage } from './utils/storage';
+import { subscribeToApplications } from './utils/db';
 
 function AppContent() {
   const { currentUser, isAuthenticated, isLoading } = useAuth();
   const [applications, setApplications] = useState([]);
 
-  // Load user-specific applications when authenticated
+  // Subscribe to Firestore applications in real time
   useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      // Check if we need to migrate old data
-      const hasUserSpecificData = userStorage.getUserApplications(currentUser.id).length > 0;
-      const hasOldData = storage.get('ai_tracker_applications', []).length > 0;
-      
-      if (!hasUserSpecificData && hasOldData) {
-        // Migrate existing data to user-specific format
-        migrateToUserSpecific(currentUser.id);
-      }
-      
-      const userApplications = userStorage.getUserApplications(currentUser.id);
-      setApplications(userApplications);
-    } else {
+    if (!isAuthenticated || !currentUser) {
       setApplications([]);
+      return;
     }
+    const unsubscribe = subscribeToApplications(currentUser.uid, setApplications);
+    return unsubscribe;
   }, [isAuthenticated, currentUser]);
-
-  // Save user-specific applications whenever they change
-  useEffect(() => {
-    if (isAuthenticated && currentUser && applications.length >= 0) {
-      userStorage.setUserApplications(currentUser.id, applications);
-    }
-  }, [applications, isAuthenticated, currentUser]);
 
   if (isLoading) {
     return (
